@@ -1,0 +1,168 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "org.example.Models" {
+  interface FormaGeometrica {
+    +adicionarPonto(Ponto)
+    +getPontos(): List<Ponto>
+    +getQuantidadePontos(): int
+    +getCorPreenchimentoHex(): String
+    +setCorPreenchimentoHex(String)
+    +getCorBordaHex(): String
+    +setCorBordaHex(String)
+    +getEspessuraBorda(): double
+    +setEspessuraBorda(double)
+    +getGroupId(): String
+    +setGroupId(String)
+    +calcularArea(): double
+    +calcularPerimetro(): double
+    +getCentroide(): Ponto
+    +contemPonto(px: double, py: double): boolean
+    +transladar(dx: double, dy: double)
+    +escalar(fator: double)
+    +rotacionar(anguloRadianos: double)
+    +cisalhar(shx: double, shy: double)
+    +clonar(): FormaGeometrica
+    +escalarEm(fator, cx, cy)
+    +rotacionarEm(angulo, cx, cy)
+    +cisalharEm(shx, shy, cx, cy)
+  }
+  abstract class FormaBase {
+    #pontos: List<Ponto>
+    #corPreenchimentoHex: String
+    #corBordaHex: String
+    #espessuraBorda: double
+    #groupId: String
+  }
+  class Ponto {
+    -x: double
+    -y: double
+    +mover(dx, dy)
+    +distancia(outro: Ponto): double
+    +clonar(): Ponto
+  }
+  class Poligono {
+    +Poligono()
+    +validar()
+    +clonar(): FormaGeometrica
+  }
+  class Circulo {
+    -raio: double
+    +Circulo(centro: Ponto, raio: double)
+    +clonar()
+  }
+  class Quadrado {
+    +Quadrado(centro: Ponto, raio: double)
+    +clonar()
+  }
+  class Hexagono {
+    +Hexagono(centro: Ponto, raio: double)
+    +clonar()
+  }
+  class GrupoFormas {
+    -filhos: List<FormaGeometrica>
+  }
+
+  FormaGeometrica <|.. FormaBase
+  FormaGeometrica <|.. GrupoFormas
+  FormaBase <|-- Poligono
+  FormaBase <|-- Circulo
+  FormaBase <|-- Quadrado
+  FormaBase <|-- Hexagono
+  FormaBase "1" *-- "*" Ponto
+  GrupoFormas o-- "1..*" FormaGeometrica : filhos (Composite)
+}
+
+package "org.example.Controller" {
+  class EditorContext {
+    -formas: List<FormaGeometrica>
+    -selecionados: List<FormaGeometrica>
+    -formaEmAndamento: FormaGeometrica
+    -ferramentaAtual: Ferramenta
+    -gridSnappingHabilitado: boolean
+    +requestRedraw()
+    +requestStatsUpdate()
+    +agruparSelecionados()
+    +desagruparSelecionados()
+    +trazerParaFrente()
+    +enviarParaTras()
+    +aplicarSnap(valor: double): double
+    +registrarEstado()
+    +desfazer()
+    +refazer()
+  }
+  class HistoricoController {
+    -undoStack: Stack<List<FormaGeometrica>>
+    -redoStack: Stack<List<FormaGeometrica>>
+    +registrarEstado(List<FormaGeometrica>)
+    +desfazer(List<FormaGeometrica>): List<FormaGeometrica>
+    +refazer(List<FormaGeometrica>): List<FormaGeometrica>
+  }
+  interface Ferramenta {
+    +aoPressionarMouse(MouseEvent, EditorContext)
+    +aoArrastarMouse(MouseEvent, EditorContext)
+    +aoSoltarMouse(MouseEvent, EditorContext)
+    +aoClicar(MouseEvent, EditorContext)
+  }
+  class FerramentaDesenhar
+  class FerramentaSelecionar {
+    -arrastandoCaixa: boolean
+    -selecaoStartX: double
+    -selecaoStartY: double
+  }
+  class FerramentaTransformar {
+    -modo: ModoFerramenta
+  }
+  class FerramentaInserirForma {
+    -centroInsercao: Ponto
+    -tipo: TipoForma
+  }
+  class FerramentaEditarVertice {
+    -verticeSelecionado: Ponto
+  }
+  class ArquivoService {
+    +salvar(Path, Documento)
+    +carregar(Path): Documento
+  }
+  class ArquivoCorrompidoException
+
+  EditorContext o-- "1" Ferramenta : estado atual (State)
+  EditorContext *-- HistoricoController
+  EditorContext o-- "*" FormaGeometrica
+  Ferramenta <|.. FerramentaDesenhar
+  Ferramenta <|.. FerramentaSelecionar
+  Ferramenta <|.. FerramentaTransformar
+  Ferramenta <|.. FerramentaInserirForma
+  Ferramenta <|.. FerramentaEditarVertice
+  HistoricoController ..> FormaGeometrica : clonar() (Memento/Prototype)
+  ArquivoService ..> ArquivoCorrompidoException
+}
+
+package "org.example.Views" {
+  class ContainerApp {
+    -areaDeDesenho: Canvas
+    -contexto: EditorContext
+    -barraLateral: BarraLateralView
+    -painelStatus: PainelStatusView
+    +inicializarEventos()
+    -redesenharCanvas()
+    -desenharForma(FormaGeometrica, boolean)
+    -salvarArquivo(): boolean
+    -carregarArquivo()
+  }
+  class BarraLateralView {
+    +atualizarCoresInterface()
+  }
+  class PainelStatusView {
+    +atualizar()
+  }
+  ContainerApp *-- BarraLateralView
+  ContainerApp *-- PainelStatusView
+}
+
+ContainerApp --> EditorContext
+BarraLateralView --> EditorContext
+PainelStatusView --> EditorContext
+ContainerApp ..> ArquivoService
+@enduml
